@@ -1,0 +1,20 @@
+{
+  "name": "sauna-control",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "vapid": "node scripts/gen-vapid.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "schema": "node -e \"const s=require('fs').readFileSync('schema.sql','utf8');require('fs').writeFileSync('src/schema.ts','// Generated from schema.sql by npm run schema. Applied automatically on first request.\\\\nexport const SCHEMA = '+JSON.stringify(s)+';\\\\n')\""
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261107.1",
+    "http_ece": "^1.2.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.158.0"
+  }
+}

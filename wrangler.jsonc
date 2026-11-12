@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sauna-control",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  // Custom domains: wrangler creates the DNS records and HTTPS certificates on deploy.
+  // The workers.dev address keeps working as a backup.
+  "routes": [
+    { "pattern": "isithotyet.com", "custom_domain": true },
+    { "pattern": "www.isithotyet.com", "custom_domain": true }
+  ],
+  "workers_dev": true,
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "SAUNA", "class_name": "SaunaDO" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SaunaDO"] }],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "sauna", "database_id": "2d3a2e58-1f2f-4e15-b2eb-7a7f947edca5" }
+  ],
+  "vars": {
+    // "1" uses a simulated controller. Production talks to the real one; .dev.vars sets "1" for local dev.
+    "HARVIA_MOCK": "0",
+    // Unit the Harvia API reports temperatures in. The docs' examples look like °C.
+    "HARVIA_UNITS": "C",
+    // Optional: pin a device id. Empty = first device on the account.
+    "HARVIA_DEVICE_ID": "",
+    "HARVIA_CABIN": "C1",
+    // Mock only: how many times faster than real life the simulated room heats.
+    "MOCK_SPEED": "20",
+    "VAPID_SUBJECT": "https://isithotyet.com"
+  }
+  // Secrets (set with `npx wrangler secret put NAME`, or in .dev.vars locally):
+  //   OWNER_PASSPHRASE   initial passphrase (changeable later in Settings)
+  //   SESSION_SECRET     random string used to sign login cookies
+  //   HARVIA_USERNAME    MyHarvia login email
+  //   HARVIA_PASSWORD    MyHarvia password
+  //   VAPID_PUBLIC_KEY   from `npm run vapid`
+  //   VAPID_PRIVATE_KEY  from `npm run vapid`
+}
