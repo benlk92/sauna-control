@@ -2,7 +2,6 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import {
-  CONTROLLER_MAX_MIN,
   HarviaAuthError,
   HarviaClient,
   MAX_F,
@@ -48,13 +47,11 @@ interface Live {
   comersRound: number | null;
   /** A session ended and the room hasn't dropped below SESSION_OVER_BELOW_F yet. */
   cooldownPending: boolean;
-  /** Time at temperature for this session, minutes (always AT_TEMP_MIN). The app ends it; the controller's own 60-min session is the backstop. */
+  /** Time at temperature for this session, minutes (always AT_TEMP_MIN). The app ends it; the controller's 3 h max on-time is the backstop. */
   atTempMin: number | null;
   /** Element-energized time so far this session (or bake-out); null until the controller reports it. */
   elementMs: number | null;
   elementLast: { t: number; on: boolean } | null;
-  /** Set when the controller refused the longer session, so its own (shorter) timer still applies. */
-  durationError: string | null;
   /** Owner tapped "I'm leaving": the heater stays on until this to dry the room, then the app stops it. */
   leaveEndsAt: number | null;
 }
@@ -89,7 +86,6 @@ const BLANK: Live = {
   atTempMin: null,
   elementMs: null,
   elementLast: null,
-  durationError: null,
   leaveEndsAt: null,
 };
 
@@ -278,14 +274,6 @@ export class SaunaDO extends DurableObject<Env> {
       await this.handleError(l, e, opts.scheduleId ? 'Scheduled start failed' : 'Start failed');
       await this.save(l);
       throw e;
-    }
-    // Ask the controller for its 60-min session; the app ends ours at the chosen time.
-    l.durationError = null;
-    try {
-      await this.controller.setDuration(CONTROLLER_MAX_MIN);
-    } catch (e) {
-      l.durationError = (e as Error).message;
-      await this.alert(l, `The controller didn’t accept the 60-min session (${l.durationError}). It may switch off an hour after the heater started.`, 'duration', 3600_000);
     }
     const now = Date.now();
     const reading = await this.readDevice(l);
@@ -742,7 +730,6 @@ export class SaunaDO extends DurableObject<Env> {
       endsAt,
       timeLeftMin: endsAt ? Math.max(0, Math.round((endsAt - now) / 60_000)) : null,
       leaving: !!l.leaveEndsAt && (l.mode === 'heating' || l.mode === 'hot'),
-      durationError: l.mode === 'heating' || l.mode === 'hot' ? l.durationError : null,
       bakeoutLeftMin: l.mode === 'bakeout' && l.bakeoutEndsAt ? Math.max(0, Math.round((l.bakeoutEndsAt - now) / 60_000)) : null,
       predictedMin: l.predictedMin,
       tellSentAt: l.tellSentAt,

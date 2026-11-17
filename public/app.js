@@ -574,10 +574,8 @@ const VIEWS = {
       else if (s.state === 'hot') stats = stat('Now', deg(s.currentF)) + stat('Time left', mins(s.timeLeftMin)) + stat('Hot since', fmtTime(s.reachedAt));
       else if (s.state === 'bakeout') stats = stat('Now', deg(s.currentF)) + stat('Left', mins(s.bakeoutLeftMin)) + stat('Humidity', s.humidity != null ? `${Math.round(s.humidity)}%` : '—');
       else stats = stat('Now', deg(s.currentF)) + stat('Preheat est.', mins(s.model?.minutes)) + stat('Next', s.schedules?.[0] ? fmtTime(s.schedules[0].hot_by) : '—');
-      // The app ends the session; the controller's own 60-min session is the backstop.
-      const note = s.durationError
-        ? `<span style="color:var(--danger)">The controller didn’t accept the 60-min session, so it may switch off an hour after the heater started.</span>`
-        : s.controllerOffAt && active
+      // The app ends the session; the controller's own max on-time (3 h, set in the Harvia app) is the backstop.
+      const note = s.controllerOffAt && active
           ? `Controller backstop: off by <b>${fmtTime(s.controllerOffAt)}</b>${
               s.endsAt && s.controllerOffAt < s.endsAt - 60_000 ? ' — <span style="color:var(--danger)">before your timer</span>' : ''
             }.`

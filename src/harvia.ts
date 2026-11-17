@@ -25,8 +25,6 @@ export interface Controller {
   read(): Promise<DeviceReading>;
   setTarget(f: number): Promise<void>;
   heater(on: boolean): Promise<void>;
-  /** Set the controller's own session length (time at temperature), minutes. */
-  setDuration(minutes: number): Promise<void>;
 }
 
 /** Login was rejected: alert the owner. */
@@ -36,12 +34,11 @@ export class HarviaCommandError extends Error {}
 
 export const MAX_F = 194;
 export const MIN_F = 104; // 40°C, the usual Fenix lower bound
-/**
- * The session length the app asks the controller for at start: 60 min, the most the FX45 gives in one
- * go. With the controller's max on-time set to 3 h (in the Harvia app), this should cover preheat plus
- * an hour at temperature. The app ends the session itself at the chosen time.
+/*
+ * Session length: the Fenix rejects ADJUST_DURATION ("not supported for device type 'Fenix'"), so the app
+ * sends none. The controller's max on-time is set to 3 h in the Harvia app, which covers preheat plus an
+ * hour at temperature; the app ends the session itself.
  */
-export const CONTROLLER_MAX_MIN = 60;
 
 const cToF = (c: number) => (c * 9) / 5 + 32;
 const fToC = (f: number) => ((f - 32) * 5) / 9;
@@ -225,27 +222,6 @@ export class HarviaClient implements Controller {
     if (!res.ok) throw new HarviaCommandError(`Set target rejected (${res.status}): ${await res.text()}`);
   }
 
-  /** ADJUST_DURATION (harvia.io/api, Device Service → Commands): "Adjusts the active session duration. Requires minutes." */
-  async setDuration(minutes: number): Promise<void> {
-    const res = await this.call(
-      'device',
-      'POST',
-      '/devices/command',
-      {
-        deviceId: await this.deviceId(),
-        cabin: { id: this.cabin },
-        command: { type: 'ADJUST_DURATION', params: { minutes: Math.round(Math.min(CONTROLLER_MAX_MIN, minutes)) } },
-      },
-      COMMAND_TIMEOUT_MS,
-    ).catch((e) => {
-      throw new HarviaCommandError(`Set duration timed out: ${e.message}`);
-    });
-    const body = (await res.json().catch(() => ({}))) as any;
-    if (!res.ok || body.handled === false) {
-      throw new HarviaCommandError(`Set duration rejected: ${body.failureReason ?? body.message ?? res.status}`);
-    }
-  }
-
   async heater(on: boolean): Promise<void> {
     const res = await this.call(
       'device',
@@ -340,12 +316,6 @@ export class MockController implements Controller {
     const s = await this.sim();
     if (s.offline) throw new HarviaCommandError('Device unavailable');
     s.targetF = Math.min(MAX_F, f);
-    await this.kv.put('mock:sim', s);
-  }
-  async setDuration(minutes: number) {
-    const s = await this.sim();
-    if (s.offline) throw new HarviaCommandError('Device unavailable');
-    s.durationMin = Math.min(CONTROLLER_MAX_MIN, minutes);
     await this.kv.put('mock:sim', s);
   }
   async heater(on: boolean) {

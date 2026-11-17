@@ -36,7 +36,7 @@ Harvia's public docs don't name the Fenix shadow fields for "heater on" and "tar
 - Start/stop: `POST {device}/devices/command` with `{ command: { type: "SAUNA", state: "on" | "off" } }`. It waits for the device to acknowledge and returns **504 "Device unavailable"** if the controller is offline.
 - Target: `PATCH {device}/devices/target` with `temperature` (and optionally humidity).
 - Readings: `GET {data}/data/latest-data` returns `temperature` **and `humidity`**. The examples look like **°C**, so the app converts (`HARVIA_UNITS`).
-- Session length: there are `ADJUST_DURATION` / `REMAINING_TIME` commands. The FX45 gives at most 60 min per command, so the app sends `ADJUST_DURATION` 60 at start (with the controller's max on-time set to 3 h in the Harvia app) and ends the session itself after an hour at temperature.
+- Session length: the docs list `ADJUST_DURATION` / `REMAINING_TIME`, but the Fenix rejects `ADJUST_DURATION` ("not supported for device type 'Fenix'"). The app sends no duration; instead the controller's max on-time is set to 3 h in the Harvia app, and the app ends the session itself after an hour at temperature.
 - There's no documented "ready at" / smart-timer endpoint.
 
 ## Still open from the brief's "To verify"
